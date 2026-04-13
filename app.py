@@ -359,8 +359,8 @@ fig.add_trace(go.Scatter(x=xl,y=[r[dn] for r in rows],name="필요 DAU",
 fig.add_trace(go.Scatter(x=xl,y=[dau_cap]*N,name="DAU 상한선",
     line=dict(color=C_RED,width=1.5,dash="dash")),secondary_y=True)
 fig.update_layout(**styled_layout(height=380,margin=dict(t=30,b=50)))
-fig.update_yaxes(title_text="매출",secondary_y=False,titlefont=dict(size=11,color=C_SUB))
-fig.update_yaxes(title_text="DAU",secondary_y=True,titlefont=dict(size=11,color=C_SUB))
+fig.update_yaxes(title_text="매출",secondary_y=False,title_font=dict(size=11,color=C_SUB))
+fig.update_yaxes(title_text="DAU",secondary_y=True,title_font=dict(size=11,color=C_SUB))
 st.plotly_chart(fig,use_container_width=True)
 
 # ─── Tabs ───
