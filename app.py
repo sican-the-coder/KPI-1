@@ -7,8 +7,8 @@ from plotly.subplots import make_subplots
 import pandas as pd
 
 # ─── Supabase ───
-SB_URL = "https://yxifzucmghsqewopssuv.supabase.co"
-SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4aWZ6dWNtZ2hzcWV3b3Bzc3V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTYwMjMsImV4cCI6MjA5MTU5MjAyM30.6bb8TR6voqCRyDQ2sgTf_D7vhWnlmaDuIw0FDyyHs4c"
+SB_URL = st.secrets["supabase"]["url"]
+SB_KEY = st.secrets["supabase"]["key"]
 
 @st.cache_resource
 def get_sb(): return create_client(SB_URL, SB_KEY)
