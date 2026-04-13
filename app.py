@@ -4,13 +4,13 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # 페이지 설정
-st.set_page_config(page_title="던파키우기 3개년 시뮬레이터", layout="wide")
+st.set_page_config(page_title="프로젝트A 시뮬레이터", layout="wide")
 
-st.title("🚀 던파키우기 3개년 매출 & DAU 시뮬레이터")
+st.title("🚀 프로젝트A 3개년 매출 & DAU 시뮬레이터")
 st.markdown("2026년 10월부터 2028년 12월까지의 목표 매출을 기반으로 월별 필요 지표를 역산합니다.")
 
 # --- 1. 사이드바: 고정 목표 설정 ---
-st.sidebar.header("📌 연간 목표 매출 (고정)")
+st.sidebar.header("📌 연간 목표 매출 (프로젝트A)")
 target_2026_q4 = 94_446_454_545
 target_2027 = 223_034_224_116
 target_2028 = 81_088_419_526
@@ -31,12 +31,9 @@ df["Year"] = df["Date"].dt.year
 df["Month"] = df["Date"].dt.month
 df["Days"] = df["Date"].dt.days_in_month
 
-# 월별 매출 비중 가중치 (기본값 설정 - 방치형 라이프사이클 반영)
-# 2026 Q4: 런칭 초기 집중 (50%, 30%, 20%)
+# 월별 매출 비중 가중치 (프로젝트 라이프사이클 반영)
 weights_2026 = [0.5, 0.3, 0.2]
-# 2027: 안정기 (업데이트/시즌별 소폭 변동, 평균 1/12)
 weights_2027 = [0.08, 0.09, 0.08, 0.08, 0.10, 0.08, 0.09, 0.08, 0.08, 0.08, 0.08, 0.08]
-# 2028: 하향 안정기
 weights_2028 = [0.09, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10]
 
 def calculate_revenue(row):
@@ -51,7 +48,7 @@ df["Revenue"] = df.apply(calculate_revenue, axis=1)
 
 # --- 3. 월별 ARPDAU 개별 조정 ---
 with st.expander("📊 월별 ARPDAU 세부 조정"):
-    st.write("각 월의 ARPDAU를 직접 조정할 수 있습니다. (기본값은 설정한 기본 ARPDAU)")
+    st.write("각 월의 ARPDAU를 직접 조정할 수 있습니다.")
     arpdau_list = []
     cols = st.columns(4)
     for i, date in enumerate(df["Date"]):
@@ -74,7 +71,7 @@ fig.add_trace(go.Bar(x=df["Date"], y=df["Revenue"], name="월 매출", yaxis="y1
 fig.add_trace(go.Scatter(x=df["Date"], y=df["Required_DAU"], name="필요 DAU", yaxis="y2", line=dict(color='red', width=3)))
 
 fig.update_layout(
-    title="3개년 매출 및 필요 DAU 추이",
+    title="프로젝트A 3개년 매출 및 필요 DAU 추이",
     yaxis=dict(title="매출 (원)"),
     yaxis2=dict(title="DAU (명)", overlaying="y", side="right"),
     legend=dict(x=0, y=1.1, orientation="h"),
@@ -83,7 +80,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # --- 5. 데이터 테이블 및 다운로드 ---
-st.subheader("📅 상세 시뮬레이션 데이터")
+st.subheader("📅 상세 시뮬레이션 데이터 (프로젝트A)")
 display_df = df[["Date", "Revenue", "ARPDAU", "Required_DAU"]].copy()
 display_df["Date"] = display_df["Date"].dt.strftime('%Y-%m')
 st.dataframe(display_df.style.format({
@@ -95,8 +92,8 @@ st.dataframe(display_df.style.format({
 # CSV 다운로드 버튼
 csv = display_df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
-    label="📥 시뮬레이션 결과 CSV 다운로드",
+    label="📥 프로젝트A 시뮬레이션 결과 CSV 다운로드",
     data=csv,
-    file_name=f"던파키우기_시뮬레이션_{datetime.now().strftime('%Y%12%d')}.csv",
+    file_name=f"ProjectA_Simulation_{datetime.now().strftime('%Y%m%d')}.csv",
     mime="text/csv",
 )
