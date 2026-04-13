@@ -142,7 +142,7 @@ if st.button("← 프로젝트 목록"): st.session_state.cur_proj=None; st.sess
 if adm:
     nt=st.text_input("프로젝트명",value=proj["name"],key="pt",label_visibility="collapsed")
     if nt!=proj["name"]: update_proj(pid,{"name":nt})
-else: st.markdown(f"## 🚀 {proj['name']}")
+else: st.markdown(f"# 🚀 {proj['name']}")
 nfo=[]
 if proj.get("genre"): nfo.append(f"🎮 {proj['genre']}")
 if proj.get("market"): nfo.append(f"🌍 {proj['market']}")
@@ -389,6 +389,6 @@ with t_dt:
         "W(KR)":round(r["fw_kr"],2),"W(GL)":round(r["fw_gl"],2),"보너스":round(r["bns"],2),
         "P.rate":round(r["pr"],1),"ARPPU":r["ar"],"ARPDAU":round(r["arpdau"]),"필요DAU":round(r["dau"]),
         "상태":"⚠️" if r["over"] else "✅"} for r in rows])
-    st.dataframe(df.style.format({"매출":"{:,.0f}","한국":"{:,.0f}","글로벌":"{:,.0f}","ARPPU":"{:,}","ARPDAU":"{:,}","필요DAU":"{:,.0f}"}),height=500,width=0)
+    st.dataframe(df.style.format({"매출":"{:,.0f}","한국":"{:,.0f}","글로벌":"{:,.0f}","ARPPU":"{:,}","ARPDAU":"{:,}","필요DAU":"{:,.0f}"}),height=500)
     csv=df.to_csv(index=False).encode("utf-8-sig")
     st.download_button("📥 CSV",csv,f"sim_{proj['name']}_{datetime.now().strftime('%Y%m%d')}.csv","text/csv")
