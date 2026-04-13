@@ -151,7 +151,7 @@ if not st.session_state.logged_in:
         st.markdown("프로젝트별 매출 목표를 시뮬레이션하고 관리합니다.")
         st.markdown("---")
         pw = st.text_input("🔒 비밀번호를 입력하세요", type="password", key="login_pw")
-        if st.button("로그인", use_container_width=True, type="primary"):
+        if st.button("로그인", width="stretch", type="primary"):
             if pw == config.get("master_password", "1234"):
                 st.session_state.logged_in = True
                 st.rerun()
@@ -201,7 +201,7 @@ if st.session_state.current_project is None:
                     period = f"{proj['start_year']}.{proj['start_month']:02d} ~ {proj['end_year']}.{proj['end_month']:02d}"
                     st.caption(f"📆 {period}")
                     st.caption(f"🔒 {'잠금' if proj.get('is_locked', True) else '해제'}")
-                    if st.button("📂 열기", key=f"open_{proj['id']}", use_container_width=True):
+                    if st.button("📂 열기", key=f"open_{proj['id']}", width="stretch"):
                         st.session_state.current_project = proj["id"]
                         st.session_state.admin_mode = False
                         st.rerun()
@@ -227,37 +227,51 @@ pid = proj["id"]
 is_admin = st.session_state.admin_mode
 
 # ─── Header ───
-hc1, hc2, hc3 = st.columns([5, 3, 2])
-with hc1:
+# Row 1: Back button + Title
+hc_back, hc_title = st.columns([1, 5])
+with hc_back:
+    if st.button("← 목록으로", key="back_btn"):
+        st.session_state.current_project = None
+        st.session_state.admin_mode = False
+        st.rerun()
+with hc_title:
     if is_admin:
         new_title = st.text_input("프로젝트명", value=proj["name"], key="proj_title", label_visibility="collapsed")
         if new_title != proj["name"]:
             update_project(pid, {"name": new_title})
     else:
         st.markdown(f"## 🚀 {proj['name']}")
-    st.caption(f"{proj.get('genre','')} · {proj.get('market','')}")
 
-with hc2:
+# Row 2: Info + Mode toggle
+hc_info, hc_mode = st.columns([3, 3])
+with hc_info:
+    info_parts = []
+    if proj.get("genre"): info_parts.append(f"🎮 {proj['genre']}")
+    if proj.get("market"): info_parts.append(f"🌍 {proj['market']}")
+    info_parts.append(f"📆 {sy}.{sm:02d} ~ {ey}.{em:02d} ({N}개월)")
+    st.caption(" · ".join(info_parts))
+
+with hc_mode:
     if is_admin:
-        st.success("🔓 관리자 모드")
-        if st.button("🔒 잠금", key="lock_btn"):
-            st.session_state.admin_mode = False
-            st.rerun()
-    else:
-        st.info("👁️ 뷰 모드 (읽기 전용)")
-        unlock_pw = st.text_input("비밀번호", type="password", key="unlock_pw", label_visibility="collapsed", placeholder="비밀번호 입력 후 Enter")
-        if unlock_pw:
-            if unlock_pw == proj.get("password", ""):
-                st.session_state.admin_mode = True
+        mc_left, mc_right = st.columns([3, 1])
+        with mc_left:
+            st.success("🔓 관리자 모드")
+        with mc_right:
+            if st.button("🔒 잠금", key="lock_btn"):
+                st.session_state.admin_mode = False
                 st.rerun()
-            else:
-                st.error("비밀번호 오류")
-
-with hc3:
-    if st.button("← 프로젝트 목록", key="back_btn"):
-        st.session_state.current_project = None
-        st.session_state.admin_mode = False
-        st.rerun()
+    else:
+        mc_left, mc_right = st.columns([3, 2])
+        with mc_left:
+            st.info("👁️ 뷰 모드")
+        with mc_right:
+            unlock_pw = st.text_input("비밀번호", type="password", key="unlock_pw", label_visibility="collapsed", placeholder="비밀번호 입력")
+            if unlock_pw:
+                if unlock_pw == proj.get("password", ""):
+                    st.session_state.admin_mode = True
+                    st.rerun()
+                else:
+                    st.error("비밀번호 오류")
 
 st.markdown("---")
 
@@ -377,6 +391,18 @@ if over_count > 0:
 else:
     mc5.metric("✅ DAU 상태", "정상", delta=f"상한 {fmt_n(dau_cap)}")
 
+# ─── DAU Cap Slider (always visible) ───
+if is_admin:
+    dau_cols = st.columns([1, 5, 1])
+    with dau_cols[0]:
+        st.markdown("🚨 **DAU 상한**")
+    with dau_cols[1]:
+        new_cap = st.slider("DAU 상한선", min_value=50000, max_value=3000000, value=int(dau_cap), step=50000, key="dau_cap_main", label_visibility="collapsed")
+        if new_cap != dau_cap:
+            update_project(pid, {"dau_cap": new_cap})
+    with dau_cols[2]:
+        st.markdown(f"**{fmt_n(dau_cap)}**")
+
 # ─── Main Chart ───
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -384,33 +410,36 @@ from plotly.subplots import make_subplots
 rev_field = "rev_kr" if rv == "kr" else "rev_gl" if rv == "global" else "revenue"
 dau_field = "dau_kr" if rv == "kr" else "dau_gl" if rv == "global" else "dau"
 
+x_labels = [r["label"] for r in calc_rows]  # "2026.10" format
+
 fig = make_subplots(specs=[[{"secondary_y": True}]])
 fig.add_trace(go.Bar(
-    x=[r["short"] for r in calc_rows],
+    x=x_labels,
     y=[r[rev_field] for r in calc_rows],
     name="매출",
     marker_color=["#ef4444" if r["over_cap"] else "#3b82f6" for r in calc_rows],
     opacity=0.7,
 ), secondary_y=False)
 fig.add_trace(go.Scatter(
-    x=[r["short"] for r in calc_rows],
+    x=x_labels,
     y=[r[dau_field] for r in calc_rows],
     name="필요 DAU", line=dict(color="#f59e0b", width=2),
 ), secondary_y=True)
 fig.add_trace(go.Scatter(
-    x=[r["short"] for r in calc_rows],
+    x=x_labels,
     y=[dau_cap] * N,
     name="DAU 상한선", line=dict(color="#ef4444", width=1, dash="dash"),
 ), secondary_y=True)
 fig.update_layout(
-    height=350, margin=dict(t=30, b=10),
+    height=350, margin=dict(t=30, b=40),
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     hovermode="x unified",
     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+    xaxis=dict(type="category", tickangle=-45),
 )
 fig.update_yaxes(title_text="매출", secondary_y=False)
 fig.update_yaxes(title_text="DAU", secondary_y=True)
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 # ─── Tabs ───
 tab_targets, tab_curve, tab_weights, tab_metrics, tab_data = st.tabs(
@@ -455,8 +484,8 @@ with tab_curve:
     with cc1:
         st.markdown("**🇰🇷 한국**")
         if is_admin:
-            new_dkr = st.slider("월간 감소율 (%)", 0.0, 15.0, decay_kr, 0.5, key="dkr")
-            new_bkr = st.slider("론칭 부스트 (첫 3개월)", 0.0, 2.0, boost_kr, 0.1, key="bkr")
+            new_dkr = st.slider("KR 월간 감소율", min_value=0.0, max_value=15.0, value=float(decay_kr), step=0.5, key="dkr", format="%.1f%%")
+            new_bkr = st.slider("KR 론칭 부스트", min_value=0.0, max_value=2.0, value=float(boost_kr), step=0.1, key="bkr", format="%.1f")
             sp_kr = st.selectbox("시즌 프리셋", list(SEASON_PRESETS.keys()),
                                   format_func=lambda x: SEASON_PRESETS[x]["label"],
                                   index=list(SEASON_PRESETS.keys()).index(proj.get("season_preset_kr","kr")),
@@ -473,8 +502,8 @@ with tab_curve:
     with cc2:
         st.markdown("**🌏 글로벌**")
         if is_admin:
-            new_dgl = st.slider("월간 감소율 (%)", 0.0, 15.0, decay_gl, 0.5, key="dgl")
-            new_bgl = st.slider("론칭 부스트 (첫 3개월)", 0.0, 2.0, boost_gl, 0.1, key="bgl")
+            new_dgl = st.slider("GL 월간 감소율", min_value=0.0, max_value=15.0, value=float(decay_gl), step=0.5, key="dgl", format="%.1f%%")
+            new_bgl = st.slider("GL 론칭 부스트", min_value=0.0, max_value=2.0, value=float(boost_gl), step=0.1, key="bgl", format="%.1f")
             sp_gl = st.selectbox("시즌 프리셋", list(SEASON_PRESETS.keys()),
                                   format_func=lambda x: SEASON_PRESETS[x]["label"],
                                   index=list(SEASON_PRESETS.keys()).index(proj.get("season_preset_global","global")),
@@ -491,14 +520,16 @@ with tab_curve:
     # Curve preview
     st.markdown("**📈 기본 가중치 커브 프리뷰**")
     import plotly.graph_objects as go2
+    cx_labels = [r["label"] for r in calc_rows]
     cfig = go2.Figure()
-    cfig.add_trace(go2.Scatter(x=[r["short"] for r in calc_rows], y=[r["bw_kr"] for r in calc_rows],
+    cfig.add_trace(go2.Scatter(x=cx_labels, y=[r["bw_kr"] for r in calc_rows],
                                name="한국", line=dict(color="#3b82f6")))
-    cfig.add_trace(go2.Scatter(x=[r["short"] for r in calc_rows], y=[r["bw_gl"] for r in calc_rows],
+    cfig.add_trace(go2.Scatter(x=cx_labels, y=[r["bw_gl"] for r in calc_rows],
                                name="글로벌", line=dict(color="#8b5cf6")))
-    cfig.update_layout(height=250, margin=dict(t=20, b=10), hovermode="x unified",
-                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(cfig, use_container_width=True)
+    cfig.update_layout(height=250, margin=dict(t=20, b=40), hovermode="x unified",
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                        xaxis=dict(type="category", tickangle=-45))
+    st.plotly_chart(cfig, width="stretch")
     
     # Season edit
     if is_admin:
@@ -516,16 +547,6 @@ with tab_curve:
             if changed:
                 field = "season_kr" if se_region == "한국" else "season_global"
                 update_project(pid, {field: json.dumps(se_data)})
-
-    # DAU Cap
-    st.markdown("---")
-    st.markdown("**🚨 DAU 상한선**")
-    if is_admin:
-        new_cap = st.slider("DAU 상한", 50000, 3000000, dau_cap, 50000, key="dau_cap_sl")
-        if new_cap != dau_cap:
-            update_project(pid, {"dau_cap": new_cap})
-    else:
-        st.metric("DAU 상한", fmt_n(dau_cap))
 
 # ═══ TAB: WEIGHTS ═══
 with tab_weights:
@@ -678,7 +699,7 @@ with tab_data:
         "ARPPU": "{:,}",
         "ARPDAU": "{:,}",
         "필요DAU": "{:,.0f}",
-    }), use_container_width=True, height=500)
+    }), width="stretch", height=500)
     
     # CSV download
     csv = df.to_csv(index=False).encode("utf-8-sig")
