@@ -2,104 +2,130 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 # --- 페이지 기본 설정 ---
-st.set_page_config(page_title="프로젝트A 시뮬레이터 V3", layout="wide")
+st.set_page_config(page_title="프로젝트A 시뮬레이터 V4", layout="wide")
 
-st.title("🚀 프로젝트A 3개년 매출 & 지표 시뮬레이터 (V3)")
-st.markdown("목표 매출(Top-down)을 기준으로 결제 비율(P.rate)과 객단가(ARPPU)를 조절하여 필요 트래픽(DAU, PU)을 유기적으로 역산합니다.")
+st.title("🚀 프로젝트A 3개년 매출 & 지표 시뮬레이터 (V4)")
 
-# --- 1. 사이드바: 탑다운 목표 금액 입력 ---
-st.sidebar.header("🎯 연간 목표 매출 입력")
-target_year1 = st.sidebar.number_input("Year 1 (2026) Total 목표 (원)", min_value=0, value=94446454545, step=100000000, format="%d")
-target_year2 = st.sidebar.number_input("Year 2 (2027) Total 목표 (원)", min_value=0, value=223034224116, step=100000000, format="%d")
-target_year3 = st.sidebar.number_input("Year 3 (2028) Total 목표 (원)", min_value=0, value=81088419526, step=100000000, format="%d")
+# --- 1. 사이드바: 시작 월 및 연간 목표 설정 ---
+st.sidebar.header("📅 시작 월 설정")
+start_year = st.sidebar.selectbox("시작 연도", [2025, 2026, 2027], index=1)
+start_month = st.sidebar.selectbox("시작 월", list(range(1, 13)), index=9) # 기본값 10월
+start_date = datetime(start_year, start_month, 1)
 
-st.sidebar.caption(f"↳ Y1: {target_year1 / 100000000:,.1f}억 / Y2: {target_year2 / 100000000:,.1f}억 / Y3: {target_year3 / 100000000:,.1f}억")
 st.sidebar.markdown("---")
+st.sidebar.header("🎯 연간 목표 매출 입력")
 
-# --- 2. 시뮬레이션 파라미터 (P.rate & ARPPU) ---
-st.sidebar.header("⚙️ 핵심 지표 연동 설정")
-st.sidebar.markdown("아래 지표를 변경하면 DAU와 PU가 즉시 재계산됩니다.")
+target_year1 = st.sidebar.number_input("Year 1 Total 목표 (원)", min_value=0, value=94446454545, step=100000000, format="%d")
+target_year2 = st.sidebar.number_input("Year 2 Total 목표 (원)", min_value=0, value=223034224116, step=100000000, format="%d")
+target_year3 = st.sidebar.number_input("Year 3 Total 목표 (원)", min_value=0, value=81088419526, step=100000000, format="%d")
 
-# P.rate와 ARPPU를 기본값으로 설정 (5% * 70,000 = ARPDAU 3,500)
-base_prate = st.sidebar.slider("결제 비율 (P.rate %)", min_value=1.0, max_value=20.0, value=5.0, step=0.1)
-base_arppu = st.sidebar.slider("결제 객단가 (ARPPU, 원)", min_value=10000, max_value=300000, value=70000, step=1000)
+# --- 2. 데이터 타임라인 및 기초 매출 배분 생성 ---
+# 시작 월부터 3개년차 12월까지 (예: 26년 10월 시작 시 28년 12월까지)
+end_year = start_year + 2
+end_date = datetime(end_year, 12, 1)
 
-# 내부적으로 ARPDAU 계산
-calculated_arpdau = base_arppu * (base_prate / 100)
-st.sidebar.info(f"💡 **현재 환산 ARPDAU:** {calculated_arpdau:,.0f}원")
-
-# --- 3. 데이터 및 가중치 계산 로직 ---
-months = pd.date_range(start="2026-10-01", end="2028-12-01", freq="MS")
+months = pd.date_range(start=start_date, end=end_date, freq="MS")
 df = pd.DataFrame({"Date": months})
-df["Year"] = df["Date"].dt.year
-df["Month"] = df["Date"].dt.month
+df["Year_Label"] = df["Date"].apply(lambda x: f"Year 1" if x.year == start_year else (f"Year 2" if x.year == start_year + 1 else "Year 3"))
 df["Days"] = df["Date"].dt.days_in_month
 
-weights_2026 = [0.5, 0.3, 0.2] 
-weights_2027 = [0.08, 0.09, 0.08, 0.08, 0.10, 0.08, 0.09, 0.08, 0.08, 0.08, 0.08, 0.08]
-weights_2028 = [0.09, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10]
-
-def calculate_revenue(row):
-    if row["Year"] == 2026:
-        return target_year1 * weights_2026[row["Month"]-10]
-    elif row["Year"] == 2027:
-        return target_year2 * weights_2027[row["Month"]-1]
+# 가중치 계산 함수 (연도별로 n분의 1을 기본으로 하되, Year 1은 시작 월에 맞춰 배분)
+def get_monthly_revenue(row):
+    year_idx = row["Date"].year
+    if year_idx == start_year:
+        # Year 1의 남은 개월 수 확인
+        remaining_months = 13 - start_month
+        return target_year1 / remaining_months
+    elif year_idx == start_year + 1:
+        return target_year2 / 12
     else:
-        return target_year3 * weights_2028[row["Month"]-1]
+        return target_year3 / 12
 
-df["Revenue"] = df.apply(calculate_revenue, axis=1)
+df["Revenue"] = df.apply(get_monthly_revenue, axis=1)
 
-# --- 4. 지표 연산 (DAU, PU 역산) ---
-df["P.rate(%)"] = base_prate
-df["ARPPU"] = base_arppu
-df["ARPDAU"] = calculated_arpdau
+# --- 3. 상세 지표 수정 섹션 (P.rate, ARPPU) ---
+# 세션 상태를 사용하여 사용자가 수정한 값을 유지
+if 'editor_df' not in st.session_state:
+    st.session_state.editor_df = pd.DataFrame({
+        "Month": df["Date"].dt.strftime('%Y-%m'),
+        "P.rate(%)": [5.0] * len(df),
+        "ARPPU": [70000] * len(df)
+    })
 
-# 1) 매출을 채우기 위해 매일 들어와야 하는 전체 유저 (DAU)
+# --- 메인 화면 레이아웃 ---
+# (상단) 그래프 섹션
+chart_placeholder = st.empty()
+
+# (중단) 상세 지표 시트
+st.subheader("📅 상세 지표 시트")
+table_placeholder = st.empty()
+
+st.markdown("---")
+
+# (하단) 월별 지표 세부 조정 섹션
+st.subheader("🛠️ 월별 지표 세부 조정")
+st.info("아래 표의 P.rate(%)와 ARPPU 칸을 더블 클릭해서 수정하세요. 수정 즉시 상단 그래프와 지표가 반영됩니다.")
+
+# 데이터 에디터 배치
+edited_df = st.data_editor(
+    st.session_state.editor_df,
+    column_config={
+        "Month": st.column_config.TextColumn("연월", disabled=True),
+        "P.rate(%)": st.column_config.NumberColumn("결제 비율 (%)", min_value=0.1, max_value=100.0, step=0.1, format="%.1f%%"),
+        "ARPPU": st.column_config.NumberColumn("결제 객단가 (원)", min_value=1000, step=1000, format="%d")
+    },
+    hide_index=True,
+    use_container_width=True,
+    key="metrics_editor"
+)
+
+# --- 4. 최종 계산 및 시각화 업데이트 ---
+# 수정한 값 반영
+df["P.rate(%)"] = edited_df["P.rate(%)"]
+df["ARPPU"] = edited_df["ARPPU"]
+df["ARPDAU"] = df["ARPPU"] * (df["P.rate(%)"] / 100)
 df["Required_DAU"] = df["Revenue"] / (df["Days"] * df["ARPDAU"])
-# 2) 그 DAU 중에서 결제 비율만큼 결제하는 실제 유저 (PU)
 df["Required_PU"] = df["Required_DAU"] * (df["P.rate(%)"] / 100)
 
-# --- 5. 시각화 대시보드 ---
+# 핵심 지표 카드
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("3개년 누적 목표", f"{(target_year1 + target_year2 + target_year3) / 100000000:,.0f}억")
-col2.metric("환산 ARPDAU", f"{calculated_arpdau:,.0f}원")
-col3.metric("평균 필요 DAU", f"{df['Required_DAU'].mean():,.0f}명")
-col4.metric("평균 필요 PU (결제자)", f"{df['Required_PU'].mean():,.0f}명")
+col1.metric("누적 목표 매출", f"{(target_year1 + target_year2 + target_year3) / 100000000:,.1f}억")
+col2.metric("평균 P.rate", f"{df['P.rate(%)'].mean():.1f}%")
+col3.metric("평균 ARPPU", f"{df['ARPPU'].mean():,.0f}원")
+col4.metric("평균 필요 DAU", f"{df['Required_DAU'].mean():,.0f}명")
 
+# 그래프 업데이트
 fig = go.Figure()
-fig.add_trace(go.Bar(x=df["Date"], y=df["Revenue"], name="월 매출 (원)", yaxis="y1", opacity=0.8))
-fig.add_trace(go.Scatter(x=df["Date"], y=df["Required_DAU"], name="전체 유저 (DAU)", yaxis="y2", line=dict(color='red', width=3)))
-fig.add_trace(go.Scatter(x=df["Date"], y=df["Required_PU"], name="결제 유저 (PU)", yaxis="y2", line=dict(color='blue', width=2, dash='dot')))
-
+fig.add_trace(go.Bar(x=df["Date"], y=df["Revenue"], name="월 매출 목표", yaxis="y1", opacity=0.7))
+fig.add_trace(go.Scatter(x=df["Date"], y=df["Required_DAU"], name="필요 DAU", yaxis="y2", line=dict(color='red', width=3)))
 fig.update_layout(
-    title="프로젝트A 월간 매출 및 지표 (DAU & PU) 추이",
+    title="프로젝트A 시뮬레이션 결과",
     yaxis=dict(title="매출 (원)"),
-    yaxis2=dict(title="유저 수 (명)", overlaying="y", side="right"),
+    yaxis2=dict(title="DAU (명)", overlaying="y", side="right"),
     legend=dict(x=0, y=1.1, orientation="h"),
     hovermode="x unified"
 )
-st.plotly_chart(fig, use_container_width=True)
+chart_placeholder.plotly_chart(fig, use_container_width=True)
 
-# --- 6. 상세 데이터 시트 ---
-st.subheader("📅 상세 지표 시트 (Revenue, DAU, PU, P.rate, ARPPU)")
-display_df = df[["Date", "Revenue", "P.rate(%)", "ARPPU", "ARPDAU", "Required_DAU", "Required_PU"]].copy()
+# 상세 시트 업데이트
+display_df = df[["Date", "Revenue", "P.rate(%)", "ARPPU", "Required_DAU", "Required_PU"]].copy()
 display_df["Date"] = display_df["Date"].dt.strftime('%Y-%m')
-
-st.dataframe(display_df.style.format({
+table_placeholder.dataframe(display_df.style.format({
     "Revenue": "{:,.0f}",
     "P.rate(%)": "{:.1f}%",
     "ARPPU": "{:,.0f}",
-    "ARPDAU": "{:,.0f}",
     "Required_DAU": "{:,.0f}",
     "Required_PU": "{:,.0f}"
 }), use_container_width=True)
 
+# CSV 다운로드
 csv = display_df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
-    label="📥 V3 시뮬레이션 결과 다운로드 (CSV)",
+    label="📥 시뮬레이션 결과 CSV 다운로드",
     data=csv,
-    file_name=f"ProjectA_V3_Metrics_{datetime.now().strftime('%Y%m%d')}.csv",
+    file_name=f"ProjectA_V4_Plan_{datetime.now().strftime('%Y%m%d')}.csv",
     mime="text/csv",
 )
