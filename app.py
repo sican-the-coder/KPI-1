@@ -248,7 +248,7 @@ with hc_info:
     info_parts = []
     if proj.get("genre"): info_parts.append(f"🎮 {proj['genre']}")
     if proj.get("market"): info_parts.append(f"🌍 {proj['market']}")
-    info_parts.append(f"📆 {sy}.{sm:02d} ~ {ey}.{em:02d} ({N}개월)")
+    info_parts.append(f"📆 {proj['start_year']}.{proj['start_month']:02d} ~ {proj['end_year']}.{proj['end_month']:02d}")
     st.caption(" · ".join(info_parts))
 
 with hc_mode:
