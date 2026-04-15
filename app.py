@@ -21,8 +21,8 @@ C_CARD2   = "#141d35"
 C_BORDER  = "rgba(99,179,237,0.10)"
 C_BORDER2 = "rgba(99,179,237,0.20)"
 C_TEXT    = "#e2e8f0"
-C_SUB     = "#94a3b8"
-C_MUTED   = "#4a5568"
+C_SUB     = "#b0bfd4"
+C_MUTED   = "#7a8fa8"
 C_BLUE    = "#3b82f6"
 C_PURPLE  = "#8b5cf6"
 C_AMBER   = "#f59e0b"
@@ -78,10 +78,10 @@ html, body, [class*="css"] {{
     background: var(--accent, {C_BLUE});
     opacity: 0.8;
 }}
-.kpi-icon {{ font-size: 1.1rem; margin-bottom: 6px; }}
-.kpi-label {{ font-size: 0.72rem; color: {C_SUB}; letter-spacing: 0.04em; margin-bottom: 6px; }}
+.kpi-icon {{ font-size: 1.2rem; margin-bottom: 6px; }}
+.kpi-label {{ font-size: 0.8rem; color: {C_SUB}; letter-spacing: 0.03em; margin-bottom: 6px; }}
 .kpi-value {{ font-size: 1.55rem; font-weight: 700; line-height: 1.1; }}
-.kpi-sub {{ font-size: 0.68rem; color: {C_MUTED}; margin-top: 4px; }}
+.kpi-sub {{ font-size: 0.76rem; color: {C_MUTED}; margin-top: 4px; }}
 
 /* ── 타이틀 ── */
 .page-title {{
@@ -91,7 +91,7 @@ html, body, [class*="css"] {{
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     margin-bottom: 2px;
 }}
-.page-meta {{ font-size: 0.82rem; color: {C_MUTED}; margin-bottom: 16px; }}
+.page-meta {{ font-size: 0.88rem; color: {C_SUB}; margin-bottom: 16px; }}
 .page-meta span {{ color: {C_SUB}; margin: 0 6px; }}
 
 /* ── 모드 배지 ── */
@@ -118,7 +118,7 @@ html, body, [class*="css"] {{
     padding: 12px 14px;
     margin-bottom: 8px;
 }}
-.view-metric-label {{ font-size: 0.72rem; color: {C_MUTED}; margin-bottom: 3px; }}
+.view-metric-label {{ font-size: 0.78rem; color: {C_SUB}; margin-bottom: 3px; }}
 .view-metric-value {{ font-size: 1.1rem; font-weight: 700; color: {C_TEXT}; }}
 
 .bonus-badge {{
@@ -158,13 +158,13 @@ html, body, [class*="css"] {{
     background: rgba(239,68,68,0.10); color: {C_RED};
 }}
 .month-bonuses {{ flex: 1; display: flex; flex-wrap: wrap; gap: 3px; }}
-.month-metrics {{ font-size: 0.75rem; color: {C_MUTED}; text-align: right; min-width: 120px; }}
+.month-metrics {{ font-size: 0.78rem; color: {C_SUB}; text-align: right; min-width: 120px; }}
 
 /* ── 연도 헤더 ── */
 .year-header {{
-    font-size: 0.8rem; font-weight: 700;
+    font-size: 0.82rem; font-weight: 700;
     letter-spacing: 0.08em; text-transform: uppercase;
-    color: {C_MUTED};
+    color: {C_SUB};
     padding: 8px 0 6px;
     border-bottom: 1px solid {C_BORDER};
     margin-bottom: 8px;
@@ -180,10 +180,10 @@ html, body, [class*="css"] {{
     text-align: center;
 }}
 .target-year {{ font-size: 1.2rem; font-weight: 700; color: {C_TEXT}; margin-bottom: 12px; }}
-.target-region {{ font-size: 0.72rem; color: {C_MUTED}; margin-bottom: 3px; }}
+.target-region {{ font-size: 0.78rem; color: {C_SUB}; margin-bottom: 3px; }}
 .target-amount {{ font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; }}
 .target-divider {{ border: none; border-top: 1px solid {C_BORDER}; margin: 10px 0; }}
-.target-total-label {{ font-size: 0.72rem; color: {C_MUTED}; }}
+.target-total-label {{ font-size: 0.78rem; color: {C_SUB}; }}
 .target-total {{ font-size: 1.0rem; font-weight: 700; color: {C_TEXT}; }}
 
 /* ── 커브 파라미터 뷰 ── */
@@ -193,8 +193,8 @@ html, body, [class*="css"] {{
     border-bottom: 1px solid {C_BORDER};
 }}
 .param-row:last-child {{ border-bottom: none; }}
-.param-label {{ font-size: 0.8rem; color: {C_SUB}; }}
-.param-value {{ font-size: 0.9rem; font-weight: 700; color: {C_TEXT}; }}
+.param-label {{ font-size: 0.84rem; color: {C_SUB}; }}
+.param-value {{ font-size: 0.95rem; font-weight: 700; color: {C_TEXT}; }}
 
 /* ── 시즌 계수 그리드 ── */
 .season-grid {{
@@ -208,7 +208,7 @@ html, body, [class*="css"] {{
     padding: 8px 4px;
     text-align: center;
 }}
-.season-month {{ font-size: 0.68rem; color: {C_MUTED}; margin-bottom: 2px; }}
+.season-month {{ font-size: 0.72rem; color: {C_SUB}; margin-bottom: 2px; }}
 .season-val {{ font-size: 0.9rem; font-weight: 700; }}
 
 /* ── 지표 카드 (뷰) ── */
@@ -220,8 +220,8 @@ html, body, [class*="css"] {{
 }}
 .metric-month {{ font-size: 0.8rem; font-weight: 700; color: {C_TEXT}; margin-bottom: 8px; }}
 .metric-row {{ display: flex; justify-content: space-between; padding: 4px 0; }}
-.metric-key {{ font-size: 0.72rem; color: {C_MUTED}; }}
-.metric-val {{ font-size: 0.8rem; font-weight: 600; color: {C_TEXT}; }}
+.metric-key {{ font-size: 0.78rem; color: {C_SUB}; }}
+.metric-val {{ font-size: 0.84rem; font-weight: 600; color: {C_TEXT}; }}
 
 /* ── Streamlit 오버라이드 ── */
 div[data-testid="stMetricValue"] {{ font-size: 1.4rem !important; font-weight: 700 !important; }}
@@ -246,6 +246,24 @@ SEASON_PRESETS = {
     "global": {"label": "🌏 글로벌형", "data": [0.9,0.85,0.9,0.85,0.9,1.0,1.15,1.1,0.95,0.9,1.2,1.4]},
     "flat":   {"label": "➖ 플랫",      "data": [1,1,1,1,1,1,1,1,1,1,1,1]},
 }
+
+def get_all_presets(proj):
+    """기본 프리셋 + 프로젝트 커스텀 프리셋 합치기"""
+    custom = proj.get("custom_season_presets", [])
+    if isinstance(custom, str):
+        try: custom = json.loads(custom)
+        except: custom = []
+    merged = dict(SEASON_PRESETS)
+    for cp in custom:
+        merged[cp["id"]] = {"label": cp["label"], "data": cp["data"]}
+    return merged
+
+def get_safe_preset_index(presets, key, fallback_key):
+    """프리셋 키가 없을 때 안전하게 fallback"""
+    keys = list(presets.keys())
+    if key in keys: return keys.index(key)
+    if fallback_key in keys: return keys.index(fallback_key)
+    return 0
 DEFAULT_BONUS = [
     {"id":"season",       "label":"시즌",     "value":0.3,   "icon":"🎊"},
     {"id":"content",      "label":"콘텐츠",   "value":0.25,  "icon":"🎮"},
