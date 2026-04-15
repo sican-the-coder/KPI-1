@@ -738,30 +738,96 @@ with t_cv:
     cc1, cc2 = st.columns(2)
 
     if adm:
+        # 프리셋 목록 (기본 + 커스텀)
+        all_presets = get_all_presets(proj)
+        preset_keys   = list(all_presets.keys())
+        preset_labels = [all_presets[k]["label"] for k in preset_keys]
+
         # ── 관리자 뷰 ──
         with cc1:
             with st.container(border=True):
                 st.markdown("**🇰🇷 한국**")
                 ndkr = st.slider("감소율 (%/월)", 0.0, 15.0, dkr, 0.5, key="ndkr", format="%.1f%%")
                 nbkr = st.slider("론칭 부스트",   0.0, 2.0,  bkr, 0.1, key="nbkr")
-                spkr = st.selectbox("시즌 프리셋", list(SEASON_PRESETS.keys()),
-                    format_func=lambda x: SEASON_PRESETS[x]["label"],
-                    index=list(SEASON_PRESETS.keys()).index(proj.get("season_preset_kr", "kr")), key="spkr")
-                if ndkr != dkr or nbkr != bkr: update_proj(pid, {"decay_kr": ndkr, "launch_boost_kr": nbkr})
-                if spkr != proj.get("season_preset_kr", "kr"):
-                    update_proj(pid, {"season_preset_kr": spkr, "season_kr": json.dumps(SEASON_PRESETS[spkr]["data"])}); st.rerun()
+                cur_spkr = proj.get("season_preset_kr", "kr")
+                spkr_idx = get_safe_preset_index(all_presets, cur_spkr, "kr")
+                spkr = st.selectbox("시즌 프리셋 (한국)", preset_keys,
+                    format_func=lambda x: all_presets[x]["label"],
+                    index=spkr_idx, key="spkr")
+                if ndkr != dkr or nbkr != bkr:
+                    update_proj(pid, {"decay_kr": ndkr, "launch_boost_kr": nbkr})
+                if spkr != cur_spkr:
+                    update_proj(pid, {
+                        "season_preset_kr": spkr,
+                        "season_kr": json.dumps(all_presets[spkr]["data"])
+                    }); st.rerun()
+
         with cc2:
             with st.container(border=True):
                 st.markdown("**🌏 글로벌**")
                 ndgl = st.slider("감소율 (%/월)", 0.0, 15.0, dgl, 0.5, key="ndgl", format="%.1f%%")
                 nbgl = st.slider("론칭 부스트",   0.0, 2.0,  bgl, 0.1, key="nbgl")
-                spgl = st.selectbox("시즌 프리셋", list(SEASON_PRESETS.keys()),
-                    format_func=lambda x: SEASON_PRESETS[x]["label"],
-                    index=list(SEASON_PRESETS.keys()).index(proj.get("season_preset_global", "global")), key="spgl")
-                if ndgl != dgl or nbgl != bgl: update_proj(pid, {"decay_global": ndgl, "launch_boost_global": nbgl})
-                if spgl != proj.get("season_preset_global", "global"):
-                    update_proj(pid, {"season_preset_global": spgl, "season_global": json.dumps(SEASON_PRESETS[spgl]["data"])}); st.rerun()
+                cur_spgl = proj.get("season_preset_global", "global")
+                spgl_idx = get_safe_preset_index(all_presets, cur_spgl, "global")
+                spgl = st.selectbox("시즌 프리셋 (글로벌)", preset_keys,
+                    format_func=lambda x: all_presets[x]["label"],
+                    index=spgl_idx, key="spgl")
+                if ndgl != dgl or nbgl != bgl:
+                    update_proj(pid, {"decay_global": ndgl, "launch_boost_global": nbgl})
+                if spgl != cur_spgl:
+                    update_proj(pid, {
+                        "season_preset_global": spgl,
+                        "season_global": json.dumps(all_presets[spgl]["data"])
+                    }); st.rerun()
 
+        # ── 커스텀 프리셋 관리 ──
+        with st.expander("⭐ 커스텀 프리셋 관리"):
+            custom_presets = proj.get("custom_season_presets", [])
+            if isinstance(custom_presets, str):
+                try: custom_presets = json.loads(custom_presets)
+                except: custom_presets = []
+
+            # 기존 커스텀 프리셋 목록 + 삭제
+            if custom_presets:
+                st.markdown("**저장된 커스텀 프리셋**")
+                for cp in custom_presets:
+                    cp_c1, cp_c2 = st.columns([5, 1])
+                    with cp_c1:
+                        st.markdown(f"**{cp['label']}** — {', '.join(f'{v:.2f}' for v in cp['data'])}")
+                    with cp_c2:
+                        if st.button("🗑️", key=f"del_preset_{cp['id']}"):
+                            new_customs = [x for x in custom_presets if x["id"] != cp["id"]]
+                            update_proj(pid, {"custom_season_presets": json.dumps(new_customs)})
+                            # 삭제된 프리셋을 쓰고 있으면 기본값으로 복구
+                            reset_data = {}
+                            if proj.get("season_preset_kr") == cp["id"]:
+                                reset_data["season_preset_kr"] = "kr"
+                                reset_data["season_kr"] = json.dumps(SEASON_PRESETS["kr"]["data"])
+                            if proj.get("season_preset_global") == cp["id"]:
+                                reset_data["season_preset_global"] = "global"
+                                reset_data["season_global"] = json.dumps(SEASON_PRESETS["global"]["data"])
+                            if reset_data: update_proj(pid, reset_data)
+                            st.rerun()
+                st.markdown("---")
+
+            # 새 프리셋 저장 — 현재 시즌 계수에서
+            st.markdown("**현재 시즌 계수로 새 프리셋 저장**")
+            st.caption("아래에서 먼저 계수를 조정한 후 이름을 입력하고 저장하세요.")
+            np_src = st.radio("기준 권역", ["한국", "글로벌"], horizontal=True, key="np_src")
+            np_name = st.text_input("프리셋 이름", key="np_name", placeholder="예: 여름 이벤트형")
+            if st.button("💾 프리셋 저장", key="save_preset"):
+                if np_name.strip():
+                    base_data = list(skr) if np_src == "한국" else list(sgl)
+                    new_id = f"custom_{int(datetime.now().timestamp())}"
+                    new_preset = {"id": new_id, "label": f"✨ {np_name.strip()}", "data": base_data}
+                    updated = custom_presets + [new_preset]
+                    update_proj(pid, {"custom_season_presets": json.dumps(updated)})
+                    st.success(f"✅ '{np_name}' 저장 완료!")
+                    st.rerun()
+                else:
+                    st.warning("프리셋 이름을 입력해주세요.")
+
+        # ── 시즌 계수 직접 수정 ──
         with st.expander("🔧 시즌 계수 직접 수정"):
             ser = st.radio("권역", ["한국", "글로벌"], horizontal=True, key="ser")
             sd = list(skr) if ser == "한국" else list(sgl); ch = False
@@ -770,11 +836,14 @@ with t_cv:
                 with sc[mi % 6]:
                     nv = st.number_input(f"{mi+1}월", 0.1, 3.0, float(sd[mi]), 0.05, key=f"se_{ser}_{mi}")
                     if nv != sd[mi]: sd[mi] = nv; ch = True
-            if ch: update_proj(pid, {"season_kr" if ser == "한국" else "season_global": json.dumps(sd)})
+            if ch:
+                update_proj(pid, {"season_kr" if ser == "한국" else "season_global": json.dumps(sd)})
 
     else:
         # ── 뷰 모드 ──
+        all_presets_view = get_all_presets(proj)
         with cc1:
+            spkr_label = all_presets_view.get(proj.get("season_preset_kr", "kr"), {}).get("label", "—")
             st.markdown(f"""<div class="card">
                 <div style="font-size:0.95rem;font-weight:700;margin-bottom:12px;">🇰🇷 한국</div>
                 <div class="param-row">
@@ -787,14 +856,15 @@ with t_cv:
                 </div>
                 <div class="param-row">
                     <span class="param-label">시즌 프리셋</span>
-                    <span class="param-value">{SEASON_PRESETS.get(proj.get("season_preset_kr","kr"),{}).get("label","—")}</span>
+                    <span class="param-value">{spkr_label}</span>
                 </div>
-                <div style="font-size:0.75rem;color:{C_MUTED};margin-top:12px;margin-bottom:6px;">월별 시즌 계수</div>
+                <div style="font-size:0.78rem;color:{C_SUB};margin-top:12px;margin-bottom:6px;">월별 시즌 계수</div>
                 <div class="season-grid">
                     {"".join(f'<div class="season-cell"><div class="season-month">{i+1}월</div><div class="season-val" style="color:{season_color(float(skr[i]))}">{float(skr[i]):.2f}</div></div>' for i in range(12))}
                 </div>
             </div>""", unsafe_allow_html=True)
         with cc2:
+            spgl_label = all_presets_view.get(proj.get("season_preset_global", "global"), {}).get("label", "—")
             st.markdown(f"""<div class="card">
                 <div style="font-size:0.95rem;font-weight:700;margin-bottom:12px;">🌏 글로벌</div>
                 <div class="param-row">
@@ -807,9 +877,9 @@ with t_cv:
                 </div>
                 <div class="param-row">
                     <span class="param-label">시즌 프리셋</span>
-                    <span class="param-value">{SEASON_PRESETS.get(proj.get("season_preset_global","global"),{}).get("label","—")}</span>
+                    <span class="param-value">{spgl_label}</span>
                 </div>
-                <div style="font-size:0.75rem;color:{C_MUTED};margin-top:12px;margin-bottom:6px;">월별 시즌 계수</div>
+                <div style="font-size:0.78rem;color:{C_SUB};margin-top:12px;margin-bottom:6px;">월별 시즌 계수</div>
                 <div class="season-grid">
                     {"".join(f'<div class="season-cell"><div class="season-month">{i+1}월</div><div class="season-val" style="color:{season_color(float(sgl[i]))}">{float(sgl[i]):.2f}</div></div>' for i in range(12))}
                 </div>
