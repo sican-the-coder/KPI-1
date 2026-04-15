@@ -33,7 +33,7 @@ st.set_page_config(page_title="매출 시뮬레이터", layout="wide", initial_s
 st.markdown(f"""<style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
     html, body, [class*="css"] {{ font-family: 'Noto Sans KR', sans-serif; }}
-    .block-container {{ padding-top: 1.5rem; padding-bottom: 1rem; }}
+    .block-container {{ padding-top: 3rem; padding-bottom: 1rem; }}
     div[data-testid="stMetricValue"] {{ font-size: 1.6rem !important; font-weight: 700 !important; }}
     div[data-testid="stMetricLabel"] {{ font-size: 0.8rem !important; }}
     .big-title {{ font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.2rem; }}
@@ -216,7 +216,27 @@ if st.session_state.cur_proj is None:
                         st.session_state.cur_proj=p["id"]; st.session_state.admin=False; st.rerun()
     else: st.info("프로젝트가 없습니다. 위에서 새로 만들어주세요.")
     st.markdown("---")
-    if st.button("🚪 로그아웃"): st.session_state.logged_in=False; st.rerun()
+    col_pw, col_logout = st.columns([3, 1])
+    with col_pw:
+        with st.expander("🔧 공통 비밀번호 변경"):
+            cfg = get_config()
+            cur_pw = st.text_input("현재 비밀번호", type="password", key="cur_mpw")
+            new_pw = st.text_input("새 비밀번호", type="password", key="new_mpw")
+            new_pw2 = st.text_input("새 비밀번호 확인", type="password", key="new_mpw2")
+            if st.button("비밀번호 변경", key="chg_mpw"):
+                if cur_pw != cfg.get("master_password", "1234"):
+                    st.error("현재 비밀번호가 틀렸습니다.")
+                elif not new_pw or len(new_pw) < 4:
+                    st.warning("새 비밀번호는 4자 이상 입력하세요.")
+                elif new_pw != new_pw2:
+                    st.error("새 비밀번호가 일치하지 않습니다.")
+                else:
+                    sb.table("app_config").update({"master_password": new_pw}).eq("id", "main").execute()
+                    st.success("✅ 비밀번호가 변경되었습니다.")
+    with col_logout:
+        st.markdown("")
+        st.markdown("")
+        if st.button("🚪 로그아웃", use_container_width=True): st.session_state.logged_in=False; st.rerun()
     st.stop()
 
 # ═══════════════════════════════════
